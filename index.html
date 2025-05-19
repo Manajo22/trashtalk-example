@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TrashTalk BLE Connect</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+      padding: 2rem;
+    }
+
+    button {
+      font-size: 1.5rem;
+      padding: 1rem 2rem;
+      border: none;
+      background: #0066ff;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 2rem;
+      font-size: 2rem;
+    }
+
+    .plus {
+      color: green;
+      font-weight: bold;
+    }
+
+    .minus {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>TrashTalk Connector</h1>
+  <button id="connectBtn">Connect to TrashTalk</button>
+  <div id="status">Status: Not connected</div>
+  <div id="score"></div>
+
+  <script>
+    let bleDevice, bleCharacteristic;
+
+    document.getElementById('connectBtn').addEventListener('click', async () => {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [{ name: 'TrashTalk' }],
+          optionalServices: ['180c']
+        });
+
+        document.getElementById('status').innerText = 'Connecting...';
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('180c');
+        const characteristic = await service.getCharacteristic('2a56');
+
+        bleDevice = device;
+        bleCharacteristic = characteristic;
+
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', handleNotification);
+
+        document.getElementById('status').innerText = 'Connected to TrashTalk';
+      } catch (error) {
+        console.error(error);
+        document.getElementById('status').innerText = 'Failed to connect';
+      }
+    });
+
+    function handleNotification(event) {
+      const value = new TextDecoder().decode(event.target.value);
+      console.log("Received:", value);
+      let display = document.getElementById('score');
+
+      if (value.includes("PET") || value.includes("HDPE") || value.includes("PP")) {
+        display.innerHTML = '<span class="plus">+10 (Recyclable)</span>';
+      } else if (value.includes("MIXED") || value.includes("OTHER") || value.includes("dirty")) {
+        display.innerHTML = '<span class="minus">-10 (Not Recyclable)</span>';
+      } else if (value.includes("No plastic")) {
+        display.innerHTML = 'Waiting for plastic...';
+      } else {
+        display.innerHTML = 'Detected: ' + value;
+      }
+    }
+  </script>
+
+</body>
+</html>
