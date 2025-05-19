@@ -36,7 +36,7 @@
         document.getElementById('status').textContent = "🔍 Scanning...";
 
         bleDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ name: 'TrashTalk' }],
+          acceptAllDevices: true,
           optionalServices: ['180c']
         });
 
